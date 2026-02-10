@@ -66,3 +66,4 @@ iOSInjectionProject/
 *.log
 build_incremental.log
 build_final.log
+GoogleService-Info.plist
