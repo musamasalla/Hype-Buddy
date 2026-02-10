@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E842C8542F39ED1100FB1835 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = E81B00612F39DF5000DED0E3 /* FirebaseAI */; };
+		E842C8552F39ED1100FB1835 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = E81B00622F39DF5000DED0E3 /* FirebaseCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		E81B00482F39DF4500DED0E3 /* Hype Buddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Hype Buddy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +41,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E842C8552F39ED1100FB1835 /* FirebaseCore in Frameworks */,
+				E842C8542F39ED1100FB1835 /* FirebaseAI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +85,8 @@
 			);
 			name = "Hype Buddy";
 			packageProductDependencies = (
+				E81B00612F39DF5000DED0E3 /* FirebaseAI */,
+				E81B00622F39DF5000DED0E3 /* FirebaseCore */,
 			);
 			productName = "Hype Buddy";
 			productReference = E81B00482F39DF4500DED0E3 /* Hype Buddy.app */;
@@ -107,6 +116,9 @@
 			);
 			mainGroup = E81B003F2F39DF4500DED0E3;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E81B00602F39DF5000DED0E3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E81B00492F39DF4500DED0E3 /* Products */;
 			projectDirPath = "";
@@ -163,12 +175,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.musamasalla.Hype-Buddy";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -197,12 +213,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.musamasalla.Hype-Buddy";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -349,6 +369,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E81B00602F39DF5000DED0E3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E81B00612F39DF5000DED0E3 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E81B00602F39DF5000DED0E3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		E81B00622F39DF5000DED0E3 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E81B00602F39DF5000DED0E3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E81B00402F39DF4500DED0E3 /* Project object */;
 }
