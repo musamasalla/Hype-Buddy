@@ -2,7 +2,7 @@
 //  HypeView.swift
 //  Hype Buddy
 //
-//  Voice playback screen with animated mascot
+//  Voice playback screen with animated mascot, glow rings, and typewriter text
 //
 
 import SwiftUI
@@ -21,19 +21,29 @@ struct HypeView: View {
     @State private var hasPlayed = false
     @State private var showWinLog = false
     @State private var pulseAnimation = false
+    @State private var revealedText = ""
+    @State private var typewriterTask: Task<Void, Never>?
     
     var body: some View {
         ZStack {
-            Theme.backgroundGradient
+            // Gradient background
+            Theme.Gradients.background(for: mascot.color)
                 .ignoresSafeArea()
             
-            VStack(spacing: Theme.spacingLarge) {
+            // Subtle particles
+            FloatingParticlesView(
+                emojis: [mascot.emoji, "🔥", "✨"],
+                count: 6
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: Theme.Spacing.lg) {
                 Spacer()
                 
-                // Animated Mascot
+                // Animated Mascot with glow
                 animatedMascot
                 
-                // Hype Text
+                // Hype Text (typewriter)
                 hypeTextSection
                 
                 Spacer()
@@ -44,20 +54,22 @@ struct HypeView: View {
                 // Log Outcome Button
                 if hasPlayed {
                     logOutcomeButton
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .padding(Theme.spacingMedium)
+            .padding(Theme.Spacing.md)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
+                    typewriterTask?.cancel()
                     voiceService.stopSpeaking()
                     dismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
         }
@@ -69,13 +81,11 @@ struct HypeView: View {
             playHype()
         }
         .onDisappear {
+            typewriterTask?.cancel()
             voiceService.stopSpeaking()
         }
         .onChange(of: voiceService.isSpeaking) { _, newValue in
             isPlaying = newValue
-            if !newValue && hasPlayed {
-                // Voice finished
-            }
         }
     }
     
@@ -83,6 +93,23 @@ struct HypeView: View {
     
     private var animatedMascot: some View {
         ZStack {
+            // Glow ring
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [mascot.color.opacity(0.25), .clear],
+                        center: .center,
+                        startRadius: 60,
+                        endRadius: 120
+                    )
+                )
+                .frame(width: 240, height: 240)
+                .scaleEffect(pulseAnimation ? 1.15 : 0.95)
+                .animation(
+                    .easeInOut(duration: 2.0).repeatForever(autoreverses: true),
+                    value: pulseAnimation
+                )
+            
             // Pulse rings
             ForEach(0..<3, id: \.self) { index in
                 Circle()
@@ -119,52 +146,57 @@ struct HypeView: View {
         }
     }
     
-    // MARK: - Hype Text
+    // MARK: - Hype Text (Typewriter)
     
     private var hypeTextSection: some View {
-        VStack(spacing: Theme.spacingMedium) {
+        VStack(spacing: Theme.Spacing.md) {
             Text(session.scenario)
-                .font(Theme.captionFont)
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, Theme.spacingMedium)
-                .padding(.vertical, Theme.spacingXS)
-                .background(Theme.backgroundCard)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.xs)
+                .background(.ultraThinMaterial)
                 .clipShape(Capsule())
             
             ScrollView {
-                Text(session.sparkyResponse)
-                    .font(Theme.bodyFont)
-                    .foregroundStyle(Theme.textPrimary)
+                Text(revealedText)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Colors.textPrimary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
+                    .contentTransition(.numericText())
             }
+            .scrollIndicators(.hidden)
             .frame(maxHeight: 200)
         }
-        .padding(Theme.spacingLarge)
-        .background(Theme.backgroundCard.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadiusLarge))
+        .padding(Theme.Spacing.lg)
+        .background(.ultraThinMaterial)
+        .clipShape(.rect(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
     }
     
     // MARK: - Controls
     
     private var controlButtons: some View {
-        HStack(spacing: Theme.spacingLarge) {
-            // Replay button
+        HStack(spacing: Theme.Spacing.lg) {
             Button {
                 playHype()
             } label: {
-                VStack(spacing: Theme.spacingXS) {
+                VStack(spacing: Theme.Spacing.xs) {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.title2)
                     Text("Replay")
-                        .font(Theme.smallFont)
+                        .font(Theme.Typography.footnote)
                 }
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(width: 80)
             }
             .disabled(isPlaying)
             
-            // Play/Pause button
             Button {
                 if isPlaying {
                     voiceService.stopSpeaking()
@@ -173,28 +205,33 @@ struct HypeView: View {
                 }
             } label: {
                 ZStack {
+                    // Glow behind button
+                    Circle()
+                        .fill(mascot.color.opacity(0.3))
+                        .frame(width: 100, height: 100)
+                        .blur(radius: 10)
+                    
                     Circle()
                         .fill(mascot.color)
                         .frame(width: 80, height: 80)
                         .shadow(color: mascot.color.opacity(0.5), radius: 10)
                     
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.title)
+                        .font(Theme.Typography.title2)
                         .foregroundStyle(.white)
                 }
             }
             
-            // Stop button
             Button {
                 voiceService.stopSpeaking()
             } label: {
-                VStack(spacing: Theme.spacingXS) {
+                VStack(spacing: Theme.Spacing.xs) {
                     Image(systemName: "stop.fill")
                         .font(.title2)
                     Text("Stop")
-                        .font(Theme.smallFont)
+                        .font(Theme.Typography.footnote)
                 }
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(width: 80)
             }
             .disabled(!isPlaying)
@@ -204,21 +241,15 @@ struct HypeView: View {
     // MARK: - Log Outcome
     
     private var logOutcomeButton: some View {
-        Button {
+        CustomButton(
+            title: "How'd it go?",
+            icon: "checkmark.circle.fill",
+            style: .threeDimensional(color: mascot.color)
+        ) {
             showWinLog = true
-        } label: {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                Text("How'd it go?")
-            }
-            .font(Theme.subheadlineFont)
-            .foregroundStyle(Theme.accentYellow)
-            .padding(.vertical, Theme.spacingSmall)
-            .padding(.horizontal, Theme.spacingLarge)
-            .background(Theme.accentYellow.opacity(0.15))
-            .clipShape(Capsule())
         }
-        .padding(.bottom, Theme.spacingMedium)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.bottom, Theme.Spacing.md)
     }
     
     // MARK: - Logic
@@ -226,6 +257,23 @@ struct HypeView: View {
     private func playHype() {
         hasPlayed = true
         voiceService.speak(session.sparkyResponse)
+        startTypewriter()
+    }
+    
+    private func startTypewriter() {
+        typewriterTask?.cancel()
+        revealedText = ""
+        let fullText = session.sparkyResponse
+        
+        typewriterTask = Task {
+            for i in fullText.indices {
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(for: .milliseconds(25))
+                await MainActor.run {
+                    revealedText = String(fullText[...i])
+                }
+            }
+        }
     }
 }
 

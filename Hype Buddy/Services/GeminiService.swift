@@ -76,6 +76,75 @@ final class GeminiService {
         return text
     }
     
+    // MARK: - Conversational Hype (Voice Chat)
+    
+    /// Generate a conversational hype response with multi-turn context
+    /// - Parameters:
+    ///   - userMessage: The current user message
+    ///   - conversationHistory: Previous messages in the conversation
+    ///   - mascot: The mascot to use
+    ///   - recentWins: Recent wins for context (only used on first turn)
+    /// - Returns: The hype response
+    func generateConversationalHype(
+        userMessage: String,
+        conversationHistory: [(role: String, text: String)],
+        mascot: Mascot,
+        recentWins: [HypeSession]
+    ) async throws -> String {
+        guard let model = model else {
+            throw GeminiError.modelNotInitialized
+        }
+        
+        var prompt = mascot.personalityPrompt
+        
+        // Only inject win memory on the first turn to avoid repetition
+        if conversationHistory.isEmpty && !recentWins.isEmpty {
+            var winContext = ""
+            for session in recentWins {
+                let notes = session.outcomeNotes ?? ""
+                winContext += "- \(session.scenario): \(session.userInput) (Result: WIN! \(notes))\n"
+            }
+            
+            prompt += """
+            
+            
+            MEMORY - User's Recent Wins (reference naturally, don't repeat every turn):
+            \(winContext)
+            """
+        }
+        
+        prompt += """
+        
+        
+        You are in a LIVE VOICE CONVERSATION. Be conversational, natural, and responsive.
+        Keep responses brief (2-3 sentences) since they'll be spoken aloud.
+        Don't repeat yourself or reference the same wins multiple times.
+        Respond directly to what the user just said.
+        """
+        
+        // Add conversation history for context
+        if !conversationHistory.isEmpty {
+            prompt += "\n\n--- CONVERSATION SO FAR ---\n"
+            for message in conversationHistory {
+                let role = message.role == "user" ? "User" : mascot.name
+                prompt += "\(role): \(message.text)\n"
+            }
+        }
+        
+        prompt += "\n\n--- NEW MESSAGE ---\nUser: \(userMessage)\n\nRespond naturally as \(mascot.name):"
+        
+        aiLogger.debug("Generating conversational hype with \(mascot.name)...")
+        
+        let response = try await model.generateContent(prompt)
+        
+        guard let text = response.text, !text.isEmpty else {
+            throw GeminiError.emptyResponse
+        }
+        
+        aiLogger.debug("Conversational hype generated")
+        return text
+    }
+    
     // MARK: - Prompt Building
     
     private func buildPrompt(

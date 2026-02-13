@@ -9,6 +9,15 @@ import SwiftUI
 import AVFoundation
 import SwiftData
 
+// MARK: - Chat Message Model
+
+struct ChatMessage: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    let isUser: Bool
+    let timestamp = Date()
+}
+
 @MainActor
 @Observable
 class VoiceChatViewModel {
@@ -21,19 +30,24 @@ class VoiceChatViewModel {
     }
     
     var state: State = .idle
-    var transcript: String = ""
-    var hypeResponse: String = ""
+    var messages: [ChatMessage] = []
+    
+    // Live transcript while user is speaking
+    var liveTranscript: String = ""
     
     // Dependencies
     private let speechService = SpeechRecognitionService()
     private let geminiService: GeminiService
-    private let voiceService: VoiceService
+    let voiceService: VoiceService
     private let modelContext: ModelContext
     private let isPremium: Bool
     
     // Internal access for View
     let mascot: Mascot
     let userProfile: UserProfile
+    
+    // Track whether wins have been injected (first turn only)
+    private var hasInjectedWins = false
     
     init(
         geminiService: GeminiService,
@@ -57,9 +71,22 @@ class VoiceChatViewModel {
         do {
             try speechService.startRecording()
             state = .listening
+            liveTranscript = ""
             Haptics.impact(style: .medium)
+            
+            // Poll for live transcript updates
+            monitorLiveTranscript()
         } catch {
             state = .error("Could not start recording: \(error.localizedDescription)")
+        }
+    }
+    
+    private func monitorLiveTranscript() {
+        Task {
+            while state == .listening {
+                liveTranscript = speechService.transcript
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+            }
         }
     }
     
@@ -69,10 +96,15 @@ class VoiceChatViewModel {
         
         guard !userText.isEmpty else {
             state = .idle
+            liveTranscript = ""
             return
         }
         
-        transcript = userText
+        // Add user message to conversation
+        let userMessage = ChatMessage(text: userText, isUser: true)
+        messages.append(userMessage)
+        liveTranscript = ""
+        
         state = .processing
         Haptics.notification(type: .success)
         
@@ -83,43 +115,41 @@ class VoiceChatViewModel {
     
     private func generateAndSpeakHype(for input: String) async {
         do {
-            // Get memory context
-            let recentWins = MemoryService.getRecentWins(
-                from: modelContext,
-                limit: 5,
-                isPremium: isPremium
-            )
+            // Build conversation history from messages
+            let history = messages.dropLast().map { msg -> (role: String, text: String) in
+                (role: msg.isUser ? "user" : "assistant", text: msg.text)
+            }
             
-            // Generate Hype
-            let response = try await geminiService.generateHype(
-                scenario: nil,
-                customInput: input,
+            // Only fetch wins on first turn
+            let recentWins: [HypeSession]
+            if !hasInjectedWins {
+                recentWins = MemoryService.getRecentWins(
+                    from: modelContext,
+                    limit: 5,
+                    isPremium: isPremium
+                )
+                hasInjectedWins = true
+            } else {
+                recentWins = []
+            }
+            
+            // Generate conversational response
+            let response = try await geminiService.generateConversationalHype(
+                userMessage: input,
+                conversationHistory: Array(history),
                 mascot: mascot,
                 recentWins: recentWins
             )
             
-            self.hypeResponse = response
+            // Add AI response to conversation
+            let aiMessage = ChatMessage(text: response, isUser: false)
+            messages.append(aiMessage)
+            
             self.state = .speaking
             
-            // Speak Hype
+            // Speak response
             voiceService.setMascot(mascot)
             voiceService.speak(response)
-            
-            // Note: VoiceService delegate would ideally handle "didFinish" to set state back to idle.
-            // For now, we manually reset after a delay or assume VoiceService handles completion state?
-            // VoiceService updates its own `isSpeaking` property.
-            // We can observe `voiceService.isSpeaking` if we want precise state sync.
-            // But strict state machine: stay in .speaking until done?
-            // Since VoiceService is Observable, let's just reset to idle when `isSpeaking` becomes false?
-            // For simplicity in this fix, we'll let it stay in speaking or reset immediately?
-            // "speak" is non-blocking (async inside but returns).
-            // Actually, `speak` on VoiceService is synchronous (fire and forget using Task).
-            // So we return immediately.
-            
-            // Wait loop for speaking to finish (simple approach for now)
-            // Ideally should use delegate or binding.
-            // Let's just set idle manually after a plausible delay or user action?
-            // Better: watch voiceService.isSpeaking.
             
             monitorSpeechCompletion()
             
@@ -129,7 +159,6 @@ class VoiceChatViewModel {
     }
     
     private func monitorSpeechCompletion() {
-        // Simple polling for MVP since we are in a Task
         Task {
             // Wait for speaking to start
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -147,6 +176,7 @@ class VoiceChatViewModel {
     func cancel() {
         speechService.stopRecording()
         voiceService.stopSpeaking()
+        liveTranscript = ""
         state = .idle
     }
     

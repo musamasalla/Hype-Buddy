@@ -36,8 +36,14 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            Theme.Colors.background
+            Theme.Gradients.onboarding
                 .ignoresSafeArea()
+            
+            FloatingParticlesView(
+                emojis: ["🔥", "✨", "🚀", "💪", "🏆"],
+                count: 10
+            )
+            .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Skip button
@@ -107,8 +113,7 @@ struct OnboardingView: View {
     
     private func infoPageView(_ page: OnboardingPage) -> some View {
         VStack(spacing: Theme.Spacing.lg) {
-            Text(page.emoji)
-                .font(.system(size: 80))
+            BouncingEmoji(emoji: page.emoji)
             
             Text(page.title)
                 .font(Theme.Typography.largeTitle)
@@ -122,8 +127,8 @@ struct OnboardingView: View {
                 .padding(.horizontal, Theme.Spacing.xl)
         }
         .transition(.asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
+            insertion: .push(from: .trailing),
+            removal: .push(from: .leading)
         ))
     }
     
@@ -166,8 +171,8 @@ struct OnboardingView: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
         }
         .transition(.asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
+            insertion: .push(from: .trailing),
+            removal: .push(from: .leading)
         ))
     }
     
@@ -198,8 +203,8 @@ struct OnboardingView: View {
             .padding(.horizontal, Theme.Spacing.md)
         }
         .transition(.asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
+            insertion: .push(from: .trailing),
+            removal: .push(from: .leading)
         ))
     }
     
@@ -239,6 +244,24 @@ struct FeatureCheck: View {
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Colors.textSecondary)
         }
+    }
+}
+
+struct BouncingEmoji: View {
+    let emoji: String
+    @State private var bouncing = false
+    
+    var body: some View {
+        Text(emoji)
+            .font(.system(size: 80))
+            .scaleEffect(bouncing ? 1.1 : 0.9)
+            .offset(y: bouncing ? -10 : 0)
+            .animation(
+                .spring(response: 0.6, dampingFraction: 0.5)
+                .repeatForever(autoreverses: true),
+                value: bouncing
+            )
+            .onAppear { bouncing = true }
     }
 }
 

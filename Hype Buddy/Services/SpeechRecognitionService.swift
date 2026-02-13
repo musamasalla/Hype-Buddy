@@ -56,7 +56,8 @@ class SpeechRecognitionService: NSObject, SFSpeechRecognizerDelegate {
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         
         guard let recognitionRequest = recognitionRequest else {
-            fatalError("Unable to create certificate request")
+            throw NSError(domain: "SpeechRecognition", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Unable to create speech recognition request"])
         }
         
         recognitionRequest.shouldReportPartialResults = true

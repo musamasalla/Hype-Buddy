@@ -64,6 +64,53 @@ enum Theme {
         static let xxl: CGFloat = 48
     }
     
+    // MARK: - Gradients
+    struct Gradients {
+        static func background(for mascot: Color = Colors.primary) -> LinearGradient {
+            LinearGradient(
+                colors: [
+                    Color(.systemBackground),
+                    mascot.opacity(0.06),
+                    Color(.systemBackground)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        
+        static let home = LinearGradient(
+            colors: [
+                Color(.systemBackground),
+                Colors.primary.opacity(0.04),
+                Colors.secondary.opacity(0.03),
+                Color(.systemBackground)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        
+        static let onboarding = LinearGradient(
+            colors: [
+                Colors.primary.opacity(0.08),
+                Color(.systemBackground),
+                Colors.secondary.opacity(0.05)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        
+        static let voiceChat = LinearGradient(
+            colors: [
+                Color(.systemBackground),
+                Colors.primary.opacity(0.1),
+                Colors.tertiary.opacity(0.06),
+                Color.black.opacity(0.02)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
     // MARK: - Legacy Compatibility (Mapped to New System)
     // These ensure existing code compiles while we transition
     
@@ -83,12 +130,17 @@ enum Theme {
     static let spacingSmall = Spacing.sm
     static let spacingMedium = Spacing.md
     static let spacingLarge = Spacing.lg
+    static let spacingXS = Spacing.xs
     
     static let cornerRadiusMedium: CGFloat = 16
+    static let cornerRadiusLarge: CGFloat = 24
     static let headlineFont = Typography.headline
     static let subheadlineFont = Typography.subheadline
     static let bodyFont = Typography.body
     static let captionFont = Typography.caption
+    static let smallFont = Typography.footnote
+    
+    static let backgroundGradient = Colors.background
 }
 
 // MARK: - Color Hex Init

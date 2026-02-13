@@ -21,7 +21,8 @@ final class SubscriptionManager {
     private(set) var purchaseInProgress = false
     
     // Store the task in a nonisolated way to allow cancellation in deinit
-    nonisolated private var updateListenerTask: Task<Void, Never>? = nil
+    @ObservationIgnored
+    nonisolated(unsafe) private var updateListenerTask: Task<Void, Never>? = nil
     
     // MARK: - Initialization
     
@@ -153,8 +154,8 @@ final class SubscriptionManager {
         
         let monthlyAnnual = monthly.price * 12
         let savings = monthlyAnnual - yearly.price
-        let percentage = (savings / monthlyAnnual) * 100
-        return "Save \\(Int(percentage.rounded()))%"
+        let percentage = NSDecimalNumber(decimal: (savings / monthlyAnnual) * 100)
+        return "Save \(percentage.intValue)%"
     }
 }
 

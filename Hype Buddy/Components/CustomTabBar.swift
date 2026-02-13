@@ -2,7 +2,7 @@
 //  CustomTabBar.swift
 //  Hype Buddy
 //
-//  Created for UI Overhaul
+//  Material tab bar with glow accent
 //
 
 import SwiftUI
@@ -37,9 +37,10 @@ struct CustomTabBar: View {
                             Text(tabs[index].title)
                                 .font(.caption2)
                                 .fontWeight(.bold)
+                                .transition(.scale.combined(with: .opacity))
                         }
                     }
-                    .foregroundColor(selectedTab == index ? Theme.Colors.primary : Theme.Colors.textSecondary)
+                    .foregroundStyle(selectedTab == index ? Theme.Colors.primary : Theme.Colors.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                     .background(
@@ -57,8 +58,19 @@ struct CustomTabBar: View {
         .padding(Theme.Spacing.xs)
         .background(
             Capsule()
-                .fill(Theme.Colors.secondaryBackground) // Material-like
-                .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 10)
         )
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.bottom, Theme.Spacing.sm)

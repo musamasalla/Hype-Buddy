@@ -40,10 +40,10 @@ final class MemoryService {
         
         do {
             let wins = try modelContext.fetch(descriptor)
-            memoryLogger.debug("Fetched \\(wins.count) recent wins for memory context")
+            memoryLogger.debug("Fetched \(wins.count) recent wins for memory context")
             return wins
         } catch {
-            memoryLogger.error("Failed to fetch recent wins: \\(error)")
+            memoryLogger.error("Failed to fetch recent wins: \(error)")
             return []
         }
     }
@@ -65,7 +65,7 @@ final class MemoryService {
         do {
             return try modelContext.fetch(descriptor)
         } catch {
-            memoryLogger.error("Failed to fetch pending outcomes: \\(error)")
+            memoryLogger.error("Failed to fetch pending outcomes: \(error)")
             return []
         }
     }
@@ -93,7 +93,7 @@ final class MemoryService {
             
             return Double(wins) / Double(total)
         } catch {
-            memoryLogger.error("Failed to calculate win rate: \\(error)")
+            memoryLogger.error("Failed to calculate win rate: \(error)")
             return 0
         }
     }
@@ -104,7 +104,7 @@ final class MemoryService {
             let descriptor = FetchDescriptor<HypeSession>()
             return try modelContext.fetchCount(descriptor)
         } catch {
-            memoryLogger.error("Failed to count sessions: \\(error)")
+            memoryLogger.error("Failed to count sessions: \(error)")
             return 0
         }
     }
@@ -116,8 +116,7 @@ final class MemoryService {
         guard !wins.isEmpty else { return "" }
         
         return wins.enumerated().map { index, session in
-            let timeAgo = session.timestamp.timeAgoDisplay()
-            return "\\(index + 1). \\(session.scenario) (\\(timeAgo)): \\(session.userInput)"
+            return "\(index + 1). \(session.scenario) (\(session.timestamp.timeAgoDisplay())): \(session.userInput)"
         }.joined(separator: "\n")
     }
 }
@@ -131,9 +130,9 @@ extension Date {
         let components = calendar.dateComponents([.day, .hour], from: self, to: now)
         
         if let days = components.day, days > 0 {
-            return days == 1 ? "yesterday" : "\\(days) days ago"
+            return days == 1 ? "yesterday" : "\(days) days ago"
         } else if let hours = components.hour, hours > 0 {
-            return hours == 1 ? "1 hour ago" : "\\(hours) hours ago"
+            return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
         } else {
             return "just now"
         }

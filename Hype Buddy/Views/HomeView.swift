@@ -2,7 +2,7 @@
 //  HomeView.swift
 //  Hype Buddy
 //
-//  UI Overhaul: Clean layout, 3D buttons, CustomCards
+//  UI Overhaul: Gradient backgrounds, floating particles, breathing mascot
 //
 
 import SwiftUI
@@ -22,7 +22,12 @@ struct HomeView: View {
     @State private var currentHypeSession: HypeSession?
     @State private var showHypeView = false
     @State private var showVoiceChat = false
+    @State private var showTextChat = false
     @State private var voiceService = VoiceService()
+    @State private var showError = false
+    @State private var errorMessage = ""
+    @State private var mascotBreathing = false
+    @State private var fabGlowing = false
     
     private var userProfile: UserProfile {
         if let existing = profiles.first {
@@ -40,8 +45,16 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.background
+                // Gradient background
+                Theme.Gradients.home
                     .ignoresSafeArea()
+                
+                // Floating ambient particles
+                FloatingParticlesView(
+                    emojis: ["🔥", "✨", "⭐️", "💪"],
+                    count: 8
+                )
+                .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: Theme.Spacing.lg) {
@@ -62,8 +75,8 @@ struct HomeView: View {
                         // Action Button
                         getHypeButton
                         
-                        // Bottom spacing for tab bar
-                        Spacer(minLength: 80)
+                        // Bottom spacing
+                        Spacer(minLength: 16)
                     }
                     .padding(.horizontal, Theme.Spacing.md)
                 }
@@ -94,27 +107,72 @@ struct HomeView: View {
                     isPremium: subscriptionManager.isPremium
                 )
             }
+            .fullScreenCover(isPresented: $showTextChat) {
+                TextChatView(
+                    mascot: currentMascot,
+                    userProfile: userProfile,
+                    geminiService: GeminiService.shared,
+                    voiceService: voiceService,
+                    modelContext: modelContext,
+                    isPremium: subscriptionManager.isPremium
+                )
+            }
+            .alert("Oops!", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
             .overlay(alignment: .bottomTrailing) {
-                if !showVoiceChat {
-                    Button {
-                        showVoiceChat = true
-                    } label: {
-                        Image(systemName: "mic.fill")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .frame(width: 60, height: 60)
-                            .background(Theme.Colors.primary)
-                            .clipShape(Circle())
-                            .shadow(color: Theme.Colors.primary.opacity(0.4), radius: 10, x: 0, y: 5)
-                            .overlay(
+                if !showVoiceChat && !showTextChat {
+                    VStack(spacing: 12) {
+                        // Text chat FAB
+                        Button {
+                            showTextChat = true
+                        } label: {
+                            Image(systemName: "keyboard")
+                                .font(.body)
+                                .foregroundStyle(.white)
+                                .frame(width: 44, height: 44)
+                                .background(currentMascot.color.opacity(0.8))
+                                .clipShape(Circle())
+                                .shadow(color: currentMascot.color.opacity(0.3), radius: 6, x: 0, y: 3)
+                        }
+                        
+                        // Voice chat FAB (existing)
+                        Button {
+                            showVoiceChat = true
+                        } label: {
+                            ZStack {
+                                // Glow ring
                                 Circle()
-                                    .stroke(.white.opacity(0.2), lineWidth: 1)
-                            )
+                                    .fill(currentMascot.color.opacity(fabGlowing ? 0.3 : 0.0))
+                                    .frame(width: 76, height: 76)
+                                    .animation(
+                                        .easeInOut(duration: 2.0).repeatForever(autoreverses: true),
+                                        value: fabGlowing
+                                    )
+                                
+                                Image(systemName: "mic.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(.white)
+                                    .frame(width: 60, height: 60)
+                                    .background(currentMascot.color)
+                                    .clipShape(Circle())
+                                    .shadow(color: currentMascot.color.opacity(0.4), radius: 10, x: 0, y: 5)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                                    )
+                            }
+                        }
                     }
                     .padding(.trailing, Theme.Spacing.md)
-                    .padding(.bottom, Theme.Spacing.md) // Adjust for tab bar if needed
+                    .padding(.bottom, 90)
                     .transition(.scale.combined(with: .opacity))
                 }
+            }
+            .onAppear {
+                fabGlowing = true
             }
         }
     }
@@ -145,176 +203,185 @@ struct HomeView: View {
                     .font(Theme.Typography.caption)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Theme.Colors.accent.opacity(0.2))
+                    .background(.ultraThinMaterial)
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Theme.Colors.accent.opacity(0.3), lineWidth: 0.5)
+                    )
                 }
             }
         }
         .padding(.top, Theme.Spacing.md)
     }
     
-    // MARK: - Mascot Section
+    // MARK: - Mascot Card
     private var mascotSection: some View {
         HStack(spacing: Theme.Spacing.md) {
-            Image(currentMascot.imageName)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 80)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(currentMascot.color.opacity(0.2), lineWidth: 2))
+            Text(currentMascot.emoji)
+                .font(.system(size: 60))
+                .scaleEffect(mascotBreathing ? 1.05 : 0.95)
+                .animation(
+                    .easeInOut(duration: 2.5).repeatForever(autoreverses: true),
+                    value: mascotBreathing
+                )
+                .onAppear { mascotBreathing = true }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(currentMascot.name)
-                    .font(Theme.Typography.title3)
+                    .font(Theme.Typography.title2)
                     .foregroundStyle(Theme.Colors.textPrimary)
                 
-                Text("Your Hype Partner")
-                    .font(Theme.Typography.caption)
+                Text("Your hype companion")
+                    .font(Theme.Typography.subheadline)
                     .foregroundStyle(Theme.Colors.textSecondary)
-                
-                Button {
-                    showMascotSelect = true
-                } label: {
-                    Text("Change Buddy")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.primary)
-                }
             }
             
             Spacer()
+            
+            Button {
+                showMascotSelect = true
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(Theme.Typography.headline)
+                    .foregroundStyle(currentMascot.color)
+                    .frame(width: 40, height: 40)
+                    .background(currentMascot.color.opacity(0.1))
+                    .clipShape(Circle())
+            }
         }
     }
     
-    // MARK: - Scenario Section
+    // MARK: - Scenarios
     private var scenarioSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("What's up?")
+            Text("What's on your mind?")
                 .font(Theme.Typography.headline)
                 .foregroundStyle(Theme.Colors.textPrimary)
             
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.sm) {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: Theme.Spacing.sm),
+                GridItem(.flexible(), spacing: Theme.Spacing.sm)
+            ], spacing: Theme.Spacing.sm) {
                 ForEach(HypeScenario.allCases) { scenario in
-                    let isSelected = selectedScenario == scenario
-                    
                     Button {
-                        withAnimation {
-                            selectedScenario = isSelected ? nil : scenario
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            selectedScenario = selectedScenario == scenario ? nil : scenario
                         }
                     } label: {
-                        HStack {
+                        HStack(spacing: 8) {
                             Text(scenario.emoji)
                             Text(scenario.title)
-                                .font(Theme.Typography.caption)
+                                .font(Theme.Typography.subheadline)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.8)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(isSelected ? Theme.Colors.primary.opacity(0.1) : Theme.Colors.secondaryBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(isSelected ? Theme.Colors.primary : Color.clear, lineWidth: 2)
+                        .padding(.horizontal, 8)
+                        .background(
+                            selectedScenario == scenario
+                            ? currentMascot.color.opacity(0.12)
+                            : Color.clear
                         )
-                        .foregroundStyle(isSelected ? Theme.Colors.primary : Theme.Colors.textPrimary)
+                        .background(.ultraThinMaterial)
+                        .foregroundStyle(
+                            selectedScenario == scenario
+                            ? currentMascot.color
+                            : Theme.Colors.textPrimary
+                        )
+                        .clipShape(.rect(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(
+                                    selectedScenario == scenario
+                                    ? currentMascot.color.opacity(0.4)
+                                    : Color.white.opacity(0.1),
+                                    lineWidth: 0.5
+                                )
+                        )
                     }
                 }
             }
         }
     }
     
-    // MARK: - Custom Input Section
+    // MARK: - Custom Input
     private var customInputSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Or tell me details...")
-                .font(Theme.Typography.headline)
-                .foregroundStyle(Theme.Colors.textPrimary)
+            Text("Add details (optional)")
+                .font(Theme.Typography.subheadline)
+                .foregroundStyle(Theme.Colors.textSecondary)
             
-            TextField("Presentation, Date, Big Game...", text: $userInput, axis: .vertical)
-                .font(Theme.Typography.body)
-                .padding()
-                .background(Theme.Colors.secondaryBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .lineLimit(3...4)
+            TextField("e.g. I'm about to give a big presentation...", text: $userInput, axis: .vertical)
+                .lineLimit(3...5)
+                .padding(Theme.Spacing.sm)
+                .background(.ultraThinMaterial)
+                .clipShape(.rect(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                )
         }
     }
     
-    // MARK: - Action Button
+    // MARK: - Get Hype Button
     private var getHypeButton: some View {
         CustomButton(
-            title: isGeneratingHype ? "Creating Hype..." : "GET HYPED!",
-            icon: isGeneratingHype ? nil : "flame.fill",
+            title: "Get Hyped! 🔥",
+            icon: "flame.fill",
             style: .threeDimensional(color: currentMascot.color),
             isDisabled: !canGetHype,
             isLoading: isGeneratingHype
         ) {
-            Task {
-                await generateHype()
-            }
+            generateHype()
         }
-        .padding(.top, Theme.Spacing.sm)
     }
     
     // MARK: - Logic
+    
     private var canGetHype: Bool {
-        let hasInput = selectedScenario != nil || !userInput.trimmingCharacters(in: .whitespaces).isEmpty
-        let hasUsage = subscriptionManager.isPremium || userProfile.freeUsesRemaining > 0
-        return hasInput && hasUsage
+        selectedScenario != nil && !isGeneratingHype &&
+        (subscriptionManager.isPremium || userProfile.freeUsesRemaining > 0)
     }
     
-    private func generateHype() async {
-        if !subscriptionManager.isPremium && userProfile.freeUsesRemaining <= 0 {
-            showPaywall = true
-            return
-        }
+    private func generateHype() {
+        guard let scenario = selectedScenario else { return }
         
         isGeneratingHype = true
         
-        do {
-            let recentWins = MemoryService.getRecentWins(
-                from: modelContext,
-                isPremium: subscriptionManager.isPremium
-            )
-            
-            let hypeText = try await GeminiService.shared.generateHype(
-                scenario: selectedScenario,
-                customInput: userInput.isEmpty ? nil : userInput,
-                mascot: currentMascot,
-                recentWins: recentWins
-            )
-            
-            let session = HypeSession(
-                scenario: selectedScenario?.title ?? "Custom",
-                userInput: userInput.isEmpty ? (selectedScenario?.title ?? "Quick hype") : userInput,
-                sparkyResponse: hypeText,
-                mascotUsed: currentMascot.rawValue
-            )
-            
-            modelContext.insert(session)
-            userProfile.freeUsesRemaining = max(0, userProfile.freeUsesRemaining - (subscriptionManager.isPremium ? 0 : 1))
-            userProfile.totalHypes += 1
-            
-            NotificationManager.shared.scheduleWinLogReminder(
-                for: session.id,
-                scenario: session.scenario
-            )
-            
-            currentHypeSession = session
-            showHypeView = true
-            
-            userInput = ""
-            selectedScenario = nil
-            
-        } catch {
-            print("Error: \(error)")
+        Task {
+            do {
+                let response = try await GeminiService.shared.generateHype(
+                    scenario: scenario,
+                    customInput: userInput.isEmpty ? nil : userInput,
+                    mascot: currentMascot,
+                    recentWins: []
+                )
+                
+                let session = HypeSession(
+                    scenario: scenario.rawValue,
+                    userInput: userInput,
+                    sparkyResponse: response,
+                    mascotUsed: currentMascot.rawValue
+                )
+                
+                modelContext.insert(session)
+                currentHypeSession = session
+                
+                if !subscriptionManager.isPremium {
+                    userProfile.freeUsesRemaining -= 1
+                }
+                
+                isGeneratingHype = false
+                showHypeView = true
+                userInput = ""
+                
+            } catch {
+                isGeneratingHype = false
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
-        
-        isGeneratingHype = false
     }
-}
-
-#Preview {
-    HomeView(subscriptionManager: SubscriptionManager())
-        .modelContainer(for: [HypeSession.self, UserProfile.self], inMemory: true)
 }

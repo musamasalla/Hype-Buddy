@@ -14,7 +14,7 @@ private let speechLogger = Logger(subsystem: "com.hypebuddy", category: "Speech"
 
 @MainActor
 @Observable
-class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
+class VoiceService: NSObject, @preconcurrency AVSpeechSynthesizerDelegate {
     
     // MARK: - Properties
     
@@ -22,6 +22,7 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     
     var isSpeaking = false
+    var isUsingFallback = false
     var error: String?
     
     private var currentMascot: Mascot = .sparky
@@ -72,11 +73,16 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
                     while edgeTTSService.isSpeaking {
                         try await Task.sleep(nanoseconds: 100_000_000)
                     }
-                    await MainActor.run { self.isSpeaking = false }
+                    await MainActor.run {
+                        self.isSpeaking = false
+                        self.isUsingFallback = false
+                        self.deactivateAudioSession()
+                    }
                 } catch {
-                    speechLogger.error("Edge TTS Server failed: \\(error.localizedDescription)")
+                    speechLogger.error("Edge TTS Server failed: \(error.localizedDescription)")
                     speechLogger.info("Falling back to Native TTS...")
                     await MainActor.run {
+                        self.isUsingFallback = true
                         self.speakNative(sanitizedText)
                     }
                 }
@@ -90,7 +96,7 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
     // MARK: - Native TTS
     
     private func speakNative(_ text: String) {
-        speechLogger.debug("Native TTS: Speaking '\\(text.prefix(50))...'")
+        speechLogger.debug("Native TTS: Speaking '\(text.prefix(50))...'")
         
         // Configure Audio Session for Playback
         do {
@@ -98,7 +104,7 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
             try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            speechLogger.error("Failed to configure audio session: \\(error)")
+            speechLogger.error("Failed to configure audio session: \(error)")
         }
         
         // Create utterance with mascot-specific settings
@@ -147,9 +153,9 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
     
     private var pitchForMascot: Float {
         switch currentMascot {
-        case .sparky: return 1.0   // Normal pitch, energetic
-        case .boost: return 1.1   // Slightly higher, uplifting
-        case .pep: return 1.05    // Warm, friendly
+        case .sparky: return 1.45  // High-pitched, bouncy child
+        case .boost: return 1.5   // Bright, chirpy child
+        case .pep: return 1.35    // Sweet, gentle child
         }
     }
     
@@ -157,6 +163,18 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.stopSpeaking(at: .immediate)
         edgeTTSService.stop()
         isSpeaking = false
+        deactivateAudioSession()
+    }
+    
+    // MARK: - Audio Session Management
+    
+    private func deactivateAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            speechLogger.debug("Audio session deactivated — other apps restored")
+        } catch {
+            speechLogger.error("Failed to deactivate audio session: \(error)")
+        }
     }
     
     // MARK: - AVSpeechSynthesizerDelegate
@@ -164,6 +182,7 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         speechLogger.debug("Native TTS: Finished")
         isSpeaking = false
+        deactivateAudioSession()
     }
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
@@ -174,5 +193,6 @@ class VoiceService: NSObject, AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         speechLogger.debug("Native TTS: Cancelled")
         isSpeaking = false
+        deactivateAudioSession()
     }
 }

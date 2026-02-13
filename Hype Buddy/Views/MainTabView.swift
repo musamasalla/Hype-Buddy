@@ -29,6 +29,10 @@ struct MainTabView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom) {
+                // Reserve space for the custom tab bar
+                Color.clear.frame(height: 70)
+            }
             
             // Tab Bar
             CustomTabBar(selectedTab: $selectedTab)

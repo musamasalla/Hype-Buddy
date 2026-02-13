@@ -17,6 +17,8 @@ struct HistoryView: View {
     
     @State private var selectedFilter: HistoryFilter = .all
     @State private var showPaywall = false
+    @State private var selectedSession: HypeSession?
+    @State private var showWinLog = false
     
     private var isPremium: Bool {
         subscriptionManager.isPremium
@@ -51,10 +53,7 @@ struct HistoryView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Theme.Colors.background
-                    .ignoresSafeArea()
-                
+            Group {
                 if sessions.isEmpty {
                     emptyState
                 } else {
@@ -74,7 +73,7 @@ struct HistoryView: View {
                                 premiumUpsell
                             }
                             
-                            Spacer(minLength: 80)
+                            Spacer(minLength: 16)
                         }
                         .padding(.horizontal, Theme.Spacing.md)
                         .padding(.top, Theme.Spacing.md)
@@ -82,10 +81,16 @@ struct HistoryView: View {
                     .scrollIndicators(.hidden)
                 }
             }
+            .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle("History")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showPaywall) {
                 PaywallView(subscriptionManager: subscriptionManager)
+            }
+            .sheet(isPresented: $showWinLog) {
+                if let session = selectedSession {
+                    WinLogView(session: session)
+                }
             }
         }
     }
@@ -154,36 +159,67 @@ struct HistoryView: View {
         LazyVStack(spacing: Theme.Spacing.sm) {
             ForEach(filteredSessions) { session in
                 SessionCard(session: session)
+                    .overlay(alignment: .bottomTrailing) {
+                        if session.outcome == nil {
+                            Text("Tap to log outcome")
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Theme.Colors.accent.opacity(0.85))
+                                .clipShape(Capsule())
+                                .padding(8)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if session.outcome == nil {
+                            selectedSession = session
+                            showWinLog = true
+                        }
+                    }
+                    .contextMenu {
+                        if session.outcome == nil {
+                            Button {
+                                selectedSession = session
+                                showWinLog = true
+                            } label: {
+                                Label("Log Outcome", systemImage: "checkmark.circle")
+                            }
+                        }
+                        
+                        Button(role: .destructive) {
+                            deleteSession(session)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
             }
         }
+    }
+    
+    // MARK: - Delete Session
+    
+    private func deleteSession(_ session: HypeSession) {
+        // Decrement wins counter if deleting a win
+        if session.outcome == "win", let profile = profiles.first {
+            profile.totalWins = max(0, profile.totalWins - 1)
+        }
+        
+        modelContext.delete(session)
+        try? modelContext.save()
     }
     
     // MARK: - Premium Upsell
     
     private var premiumUpsell: some View {
-        Button {
+        CustomButton(
+            title: "See all \(sessions.count) sessions",
+            icon: "lock.fill",
+            style: .threeDimensional(color: Theme.Colors.accent)
+        ) {
             showPaywall = true
-        } label: {
-            CustomCard {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("🔒 See all \(sessions.count) sessions")
-                            .font(Theme.Typography.headline)
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                        
-                        Text("Go premium for full history")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(Theme.Colors.accent)
-                }
-            }
         }
-        .buttonStyle(.plain)
         .padding(.bottom, Theme.Spacing.lg)
     }
 }

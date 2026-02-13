@@ -17,8 +17,15 @@ enum Config {
     static let freeHistoryLimit = 10  // Last 10 sessions for free users
     
     // MARK: - Edge TTS Server
-    static let edgeTTSServerURL = "https://openai-edge-tts-production-c3c6.up.railway.app"
-    static let edgeTTSAPIKey = "luna_tts_key"  // Reusing Luna's TTS server
+    static let edgeTTSServerURL = Bundle.main.object(forInfoDictionaryKey: "EDGE_TTS_SERVER_URL") as? String
+        ?? "https://openai-edge-tts-production-c3c6.up.railway.app"
+    static let edgeTTSAPIKey: String = {
+        // Prefer Info.plist / xcconfig injection; fall back to 'luna_tts_key'
+        if let key = Bundle.main.object(forInfoDictionaryKey: "EDGE_TTS_API_KEY") as? String, !key.isEmpty {
+            return key
+        }
+        return "luna_tts_key"
+    }()
     
     // MARK: - AI Settings
     // Firebase AI Logic is configured via GoogleService-Info.plist
@@ -34,10 +41,10 @@ enum Config {
     static let termsOfServiceURL = "https://musamasalla.github.io/hype-buddy/terms.html"
     static let supportEmail = "musamasalladev@gmail.com"
     
-    // URL versions for views
-    static let privacyURL = URL(string: privacyPolicyURL)!
-    static let termsURL = URL(string: termsOfServiceURL)!
-    static let supportURL = URL(string: "mailto:\(supportEmail)")!
+    // URL versions for views (safe unwrap)
+    static let privacyURL: URL = URL(string: privacyPolicyURL) ?? URL(string: "https://example.com")!
+    static let termsURL: URL = URL(string: termsOfServiceURL) ?? URL(string: "https://example.com")!
+    static let supportURL: URL = URL(string: "mailto:\(supportEmail)") ?? URL(string: "https://example.com")!
     
     // MARK: - Notification
     static let winLogReminderDelay: TimeInterval = 2 * 60 * 60  // 2 hours after hype

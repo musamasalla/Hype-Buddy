@@ -28,30 +28,26 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Theme.Colors.background
-                    .ignoresSafeArea()
+            List {
+                // Subscription Section
+                subscriptionSection
                 
-                List {
-                    // Subscription Section
-                    subscriptionSection
-                    
-                    // Preferences Section
-                    preferencesSection
-                    
-                    // Support Section
-                    supportSection
-                    
-                    // About Section
-                    aboutSection
-                    
-                    // Danger Zone
-                    dangerZone
-                }
-                .scrollContentBackground(.hidden)
+                // Preferences Section
+                preferencesSection
+                
+                // Support Section
+                supportSection
+                
+                // About Section
+                aboutSection
+                
+                // Danger Zone
+                dangerZone
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showPaywall) {
                 PaywallView(subscriptionManager: subscriptionManager)
             }

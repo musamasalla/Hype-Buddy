@@ -22,7 +22,7 @@ class EdgeTTSAPIService: NSObject, AVAudioPlayerDelegate {
     
     // Voice options - Edge TTS neural voices
     // See: https://tts.travisvn.com for full list
-    private var currentVoice = "en-US-GuyNeural"  // Energetic male voice for hype
+    private var currentVoice = "en-US-AnaNeural"  // Child voice – cute and playful
     
     var isSpeaking: Bool = false
     private var audioPlayer: AVAudioPlayer?
@@ -32,7 +32,7 @@ class EdgeTTSAPIService: NSObject, AVAudioPlayerDelegate {
         serverURL: String = Config.edgeTTSServerURL,
         apiKey: String = Config.edgeTTSAPIKey
     ) {
-        self.serverURL = serverURL.isEmpty ? 
+        self.serverURL = serverURL.isEmpty ?
             (Bundle.main.object(forInfoDictionaryKey: "EDGE_TTS_SERVER_URL") as? String ?? "") : serverURL
         self.apiKey = apiKey
         super.init()
@@ -49,14 +49,14 @@ class EdgeTTSAPIService: NSObject, AVAudioPlayerDelegate {
     func configureForMascot(_ mascot: Mascot) {
         currentSpeed = mascot.voiceSpeed
         
-        // Different voice styles for different mascots
+        // Distinct child-like voices from different English locales
         switch mascot {
         case .sparky:
-            currentVoice = "en-US-GuyNeural"  // Energetic male
+            currentVoice = "en-US-AnaNeural"      // 🇺🇸 Child voice – bubbly, energetic
         case .boost:
-            currentVoice = "en-US-JennyNeural"  // Inspiring female
+            currentVoice = "en-GB-MaisieNeural"    // 🇬🇧 Young British – bright, peppy
         case .pep:
-            currentVoice = "en-US-AvaNeural"  // Warm, friendly female
+            currentVoice = "en-AU-NatashaNeural"   // 🇦🇺 Young Australian – warm, friendly
         }
     }
     
@@ -75,17 +75,19 @@ class EdgeTTSAPIService: NSObject, AVAudioPlayerDelegate {
         
         guard !sanitizedText.isEmpty else { return }
         
-        ttsLogger.debug("EdgeTTS API: Requesting speech for '\\(sanitizedText.prefix(50))...'")
+        ttsLogger.debug("EdgeTTS API: Requesting speech for '\(sanitizedText.prefix(50))...'")
         
         // Build request
-        guard let url = URL(string: "\\(serverURL)/v1/audio/speech") else {
+        guard let url = URL(string: "\(serverURL)/v1/audio/speech") else {
             throw EdgeTTSError.invalidURL
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \\(apiKey)", forHTTPHeaderField: "Authorization")
+        if !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         request.timeoutInterval = 30
         
         let body: [String: Any] = [
@@ -107,7 +109,7 @@ class EdgeTTSAPIService: NSObject, AVAudioPlayerDelegate {
         
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            ttsLogger.error("EdgeTTS API Error (\\(httpResponse.statusCode)): \\(errorMessage)")
+            ttsLogger.error("EdgeTTS API Error (\(httpResponse.statusCode)): \(errorMessage)")
             throw EdgeTTSError.serverError(statusCode: httpResponse.statusCode, message: errorMessage)
         }
         
@@ -174,8 +176,8 @@ enum EdgeTTSError: LocalizedError {
             return "Invalid server URL"
         case .invalidResponse:
             return "Invalid server response"
-        case .serverError(let code, let message):
-            return "Server error (\\(code)): \\(message)"
+        case .serverError(let code, _):
+            return "Server error (\(code))"
         case .playbackFailed:
             return "Audio playback failed"
         }
